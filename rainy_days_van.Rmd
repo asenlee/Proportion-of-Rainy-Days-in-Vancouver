@@ -1,0 +1,41 @@
+---
+title: "Rainy Days in Vancouver"
+Author: "Asen Lee, Stefan Ngyugen, Venus Lee"
+date: "`r Sys.Date()`"
+output: 
+  bookdown::pdf_document2:
+    includes:
+      in_header: preamble.tex
+    number_sections: false
+    toc: FALSE
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, error = FALSE, echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(caret)
+```
+
+# Introduction
+
+
+
+# Codes and Analysis
+
+Load Dataset
+```{r}
+data <- read.csv("combined_weather.csv")
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r}
+
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
