@@ -20,6 +20,7 @@ library(caret)
 
 # Introduction
 
+Vancouver is known to be a rainy city, and as students attending UBC, it is natural for us to wonder how many rainy days we will have on average per year. Using the sampling methods we have learned in class, we will conduct an analysis on the weather data for the past 80 years to figure out the proportion of rainy days per year and the mean number of rainy days we have per year. We will use both SRS and Stratified Sampling as our methods to conduct our analysis, and we will use ratio estimation using the mean temperature to see if it will give us a better estimate.
 
 
 # Codes and Analysis
@@ -27,7 +28,18 @@ library(caret)
 Load Dataset
 ```{r}
 data <- read.csv("combined_weather.csv")
+data <- data[data$Year != "Year", ]
+data <- data %>% select(Year, Month, Day, Mean.Temp..Â.C., Total.Rain..mm.)
+data <- data %>% rename(mean_temp = Mean.Temp..Â.C.,
+                        total_rain = Total.Rain..mm.)
 ```
+
+We will collect a simple random sample of size $n = 365$ from a total population of $N = 30681$ to estimate the proportion of rainy days in a year.
+```{r}
+
+
+```
+
 
 ## Including Plots
 
@@ -38,4 +50,3 @@ You can also embed plots, for example:
 
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
