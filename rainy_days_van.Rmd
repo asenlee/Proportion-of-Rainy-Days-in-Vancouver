@@ -28,22 +28,74 @@ Vancouver is known to be a rainy city, and as students attending UBC, it is natu
 Load Dataset
 ```{r}
 data <- read.csv("combined_weather.csv")
+```
+
+```{r, echo = FALSE}
+# data wrangling
 data <- data[data$Year != "Year", ]
 data <- data %>% select(Year, Month, Day, Mean.Temp..Â.C., Total.Rain..mm.)
 data <- data %>% rename(mean_temp = Mean.Temp..Â.C.,
                         total_rain = Total.Rain..mm.)
+data[] <- lapply(data, function(x) {
+   if (is.character(x))
+        as.numeric(x)
+   else x
+})
+data <- data %>% fill(total_rain)
+data <- data %>% fill(mean_temp)
 ```
 
-We will collect a simple random sample of size $n = 365$ from a total population of $N = 30681$ to estimate the proportion of rainy days in a year.
+## Proportion of Rainy Days
+
+Sample Size Calculation:
+\
+We have a total population size of $N = 30681$. Thus, we can use the formula:
+$n = n_0/(1 + n_0/N)$ where $n_0 = 1.96^2s_g^2/\delta^2$, $s_g = 0.5$ (conservative guess) and $\delta = 0.01, 0.02, 0.03$ to calculate the sample size.
+
 ```{r}
+# sample size calculation
+N <- nrow(data)
+s_g <- 0.5
+delta <- c(0.03, 0.02, 0.01)
+n_0 <- (1.96^2*s_g^2)/delta^2
+n <- n_0/(1 + n_0/N)
 
-
+# table
+mat <- matrix(c(delta, n), nrow = 3)
+knitr::kable(x = mat, col.names = c("delta", "n"))
 ```
+For our analysis, we want an accuracy of +/- 0.02 percentage points 19 times out of 20. Hence, we will choose our sample size to be 2227.
+\
+We will collect a simple random sample of size $n = 2227$ from a total population of $N = 30681$ with replacement to estimate the proportion of rainy days in Vancouver.
+```{r}
+# population proportion
+set.seed(2021)
+n <- 2227
+srs <- sample(data$total_rain, size = n, replace = FALSE)
+p_hat <- length(srs[srs > 0])/n
+round(p_hat, 4)
+```
+The population proportion p is found to be 0.4486.\
+
+We will use the formula: $SE(\hat{p}) = \sqrt{\hat{p}(1-\hat{p})/n}$ to calculate the standard error.
+
+```{r}
+# standard error
+se <- sqrt(p_hat*(1-p_hat)/n)
+round(se, 4)
+```
+We get a standard error of 0.105, which is expected since we chose the sample size to give +/- 0.02 percentage points.
+\
+95% Confidence Interval: \
+```{r}
+CI <- c(p_hat - 1.96*se, p_hat + 1.96*se)
+round(CI, 4)
+```
+We obtain a 95% confidence interval of [0.4279, 0.4692]. Hence, we are 95% confident that out of all the days in Vancouver, 0.4279 to 0.4692 percent of days will be rainy days. This is quite surprising although we knew that it rains often in Vancouver.
 
 
 ## Including Plots
 
-You can also embed plots, for example:
 
 ```{r}
 
