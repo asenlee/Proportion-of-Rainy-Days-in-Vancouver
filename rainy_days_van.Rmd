@@ -1,11 +1,9 @@
 ---
-title: "Rainy Days in Vancouver"
-Author: "Asen Lee, Stefan Ngyugen, Venus Lee"
+title: "How Often Does it Rain in Vancouver?"
+Author: "Asen Lee"
 date: "`r Sys.Date()`"
 output: 
   bookdown::pdf_document2:
-    includes:
-      in_header: preamble.tex
     number_sections: false
     toc: FALSE
 urlcolor: blue
@@ -20,12 +18,23 @@ library(caret)
 
 # Introduction
 
-Vancouver is known to be a rainy city, and as students attending UBC, it is natural for us to wonder how many rainy days we will have on average per year. Using the sampling methods we have learned in class, we will conduct an analysis on the weather data for the past 80 years to figure out the proportion of rainy days per year and the mean number of rainy days we have per year. We will use both SRS and Stratified Sampling as our methods to conduct our analysis, and we will use ratio estimation using the mean temperature to see if it will give us a better estimate.
+Vancouver is known to be a rainy city, and as students attending UBC, it is only natural for us to wonder what proportion of days it actually rains, or the average number of rainy days per year. Using sampling methods we have learned in class, we will conduct an analysis on Vancouver weather data over the past 83 years to estimate the total proportion of rainy days in Vancouver’s history, and the mean number of days per year where it rains over 10mm. We will use both SRS and Stratified Sampling as our methods to draw from a dataset of daily Vancouver International Airport weather data from 1937–2020.
+
+## Background
+
+Environment Canada defines a rainy day as a calendar day with a total rainfall of at least 0.2mm. Note that rainfall is differentiated from precipitation, as the latter includes snowfall. Summarized weather data from Environment Canada Canadian Climate Normals 1981–2010 Station Data shows that average annual number of days with rainfall is 165.1, a proportion of 45.23%. We treat this statistic as a point of reference. We cannot treat this as a true population parameter however, as this statistic arised from data between 1981–2010. The City of Vancouver was incorporated in 1886, thus our parameter of interest is the proportion of rainy days in all of Vancouver’s existence. There is no reliable weather data extending to that time, therefore the true population parameter is unknown.
+
+## Objectives
+
+We denote our two parameters of interest, π : the proportion of rainy days in Vancouver, and µ : the mean number of days per year where it rains at least 10mm. The population of interest are all calendar days in Vancouver’s history. We choose 10mm as a “cut off” for our second estimate, as we consider daily rainfall amounts of less than 10mm as light rain. Hence, we are interested not only in the proportion of rainy days, but also in how many of those days are not considered “light rain” days.
+
+# Methods
+
+## Data Collection
+
+We obtained daily weather records at Vancouver International Airport from Environment Canada for years 1937–2020. Each year of weather data are available for download as a .csv file on Environment Canada’s website. We combined all 83 years of .csv files into a single .csv dataset of 30,681 days of weather records. For each daily record, the dataset contains information such as low, high and mean temperatures, total rain in mm, total snowfall in cm, and total precipitation in mm. After dataset cleaning, we only retain the fields: date, mean temperature and total rain.
 
 
-# Codes and Analysis
-
-Load Dataset
 ```{r}
 data <- read.csv("combined_weather.csv")
 ```
@@ -45,12 +54,15 @@ data <- data %>% fill(total_rain)
 data <- data %>% fill(mean_temp)
 ```
 
-## Proportion of Rainy Days
 
-Sample Size Calculation:
+## Assumptions
+
+We assumed that the proportion of rainy days each year are independent and identically distributed. Hence by Central Limit Theorem, our estimators for π and µ are reasonable and we can extend our inferences to dates outside of the dataset.
+
+
+## Sample Size Calculation:
 \
-We have a total population size of $N = 30681$. Thus, we can use the formula:
-$n = n_0/(1 + n_0/N)$ where $n_0 = 1.96^2s_g^2/\delta^2$, $s_g = 0.5$ (conservative guess) and $\delta = 0.01, 0.02, 0.03$ to calculate the sample size.
+Our population of interest are all calendar days in Vancouver’s history, which are all days from 1886–present. In theory, population size N, is very large and is increasing each day, so $N \rightarrow \infty$. However, the earliest reliable data we were able to obtain is from 1937, so we are sampling from a finite dataset of $N = 30681$. How we are able to extend our inferences to dates outside of this dataset is explained in Assumptions. Our sample size n was calculated with forumla: $n = n_0/(1 + n_0/N)$ where $n_0 = 1.96^2s_g^2/\delta^2$, $s_g = 0.5$ (conservative guess) and $\delta = 0.01, 0.02, 0.03$ to calculate the sample size. $\delta$ is the margin of error at 95% confidence and $s_g$ is our prior guess of the variance of the parameter (worst case).
 
 ```{r}
 # sample size calculation
@@ -67,6 +79,9 @@ knitr::kable(x = mat, col.names = c("delta", "n"))
 For our analysis, we want an accuracy of +/- 0.02 percentage points 19 times out of 20. Hence, we will choose our sample size to be 2227.
 \
 We will collect a simple random sample of size $n = 2227$ from a total population of $N = 30681$ with replacement to estimate the proportion of rainy days in Vancouver.
+
+## Simple Random Sampling
+
 ```{r}
 # population proportion
 set.seed(2021)
@@ -91,10 +106,11 @@ We get a standard error of 0.105, which is expected since we chose the sample si
 CI <- c(p_hat - 1.96*se, p_hat + 1.96*se)
 round(CI, 4)
 ```
-We obtain a 95% confidence interval of [0.4279, 0.4692]. Hence, we are 95% confident that out of all the days in Vancouver, 0.4279 to 0.4692 percent of days will be rainy days. This is quite surprising although we knew that it rains often in Vancouver.
+We obtain a 95% confidence interval of [0.4279, 0.4692]. Hence, we are 95% confident that out of all the days in Vancouver, 0.4279 to 0.4692 percent of days will be rainy days. This is quite surprising although we knew that it rains often in Vancouver.\
+This also means that out of 365 days, we have about 161 rainy days!
 
 
-## Including Plots
+## Stratified Sampling
 
 
 ```{r}
