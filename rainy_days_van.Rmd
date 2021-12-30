@@ -22,11 +22,12 @@ Vancouver is known to be a rainy city, and as students attending UBC, it is only
 
 ## Background
 
-Environment Canada defines a rainy day as a calendar day with a total rainfall of at least 0.2mm. Note that rainfall is differentiated from precipitation, as the latter includes snowfall. Summarized weather data from Environment Canada Canadian Climate Normals 1981–2010 Station Data shows that average annual number of days with rainfall is 165.1, a proportion of 45.23%. We treat this statistic as a point of reference. We cannot treat this as a true population parameter however, as this statistic arised from data between 1981–2010. The City of Vancouver was incorporated in 1886, thus our parameter of interest is the proportion of rainy days in all of Vancouver’s existence. There is no reliable weather data extending to that time, therefore the true population parameter is unknown.
+Environment Canada defines a rainy day as a calendar day with a total rainfall of at least 0.2mm. Note that rainfall is differentiated from precipitation, as the latter includes snowfall. Summarized weather data from Environment Canada Canadian Climate Normals 1981–2010 Station Data shows that average annual number of days with rainfall is 165.1, a proportion of 45.23%. We treat this statistic as a point of reference. We cannot treat this as a true population parameter however, as this statistic arose from data between 1981–2010. The City of Vancouver was incorporated in 1886, thus our parameter of interest is the proportion of rainy days in all of Vancouver’s existence. There is no reliable weather data extending to that time, therefore the true population parameter is unknown.
 
 ## Objectives
 
 We denote our two parameters of interest, π : the proportion of rainy days in Vancouver, and µ : the mean number of days per year where it rains at least 10mm. The population of interest are all calendar days in Vancouver’s history. We choose 10mm as a “cut off” for our second estimate, as we consider daily rainfall amounts of less than 10mm as light rain. Hence, we are interested not only in the proportion of rainy days, but also in how many of those days are not considered “light rain” days.
+
 
 # Methods
 
@@ -108,13 +109,190 @@ round(CI, 4)
 ```
 We obtain a 95% confidence interval of [0.4279, 0.4692]. Hence, we are 95% confident that out of all the days in Vancouver, 0.4279 to 0.4692 percent of days will be rainy days. This is quite surprising although we knew that it rains often in Vancouver.\
 This also means that out of 365 days, we have about 161 rainy days!
+\
+The estimate for $µ$, mean number of days per year in Vancouver where it rains at least 10mm is:
 
+```{r}
+# mu
+srs <- sample(data$total_rain, size = n, replace = FALSE)
+srs <- as.numeric(as.character(srs))
+p_hat <- length(srs[srs >= 10])/n
+mu_hat <- p_hat*365
+round(mu_hat,0)
+```
+
+with standard error of 2.3349.
+
+```{r}
+# SE mu
+SE.mu <- sqrt(365^2*(1-n/N)*p_hat*(1-p_hat)/n)
+round(SE.mu,4)
+# 95 CI
+CI <- c(mu_hat - 1.96*SE.mu, mu_hat + 1.96*SE.mu)
+round(CI, 0)
+```
+
+Hence, the 95% confidence interval for µ is (36, 45).
 
 ## Stratified Sampling
+\
+We divide the dataset into four equal size strata based on season: months 12, 1, 2
+as winter, 3–5 as spring, 6–8 as summer, and 9–11 as fall.
+\
+### Within-stratum Variance
+
+As we have lived in Vancouver all our lives, we believe that the variance of daily weather may differ between seasons. For example, summers tend to be dry and warm with minimal variability between each day, whereas some winters can be very wet and mild while other winters dry and cold. We therefore attempted to take this variability into account when determining the sample size’s of our strata.
+
+From Environment Canada, we obtained a dataset outlining annual total rainfall amounts in mm, by season, from years 1897–2012.
+
+With this data, we computed sample variances of the total rainfall amounts for each season. The results are as follows:
 
 
 ```{r}
-
-
+# estimated variance of individual stratum
+seas.rainfall <- read.csv("van_adjusted_rainfall.txt", header = T )
+seas.rainfall <- seas.rainfall %>% select(Winter, Spring, Summer, Autumn)
+seas.rainfall.var <- apply(seas.rainfall, MARGIN = 2, var)
+# table
+mat <- matrix(c(12039, 5017, 2297, 8937), nrow = 1)
+knitr::kable(x = mat, col.names = c("Winter", "Spring", "Summer", "Fall"))
 ```
+
+Note that these are the variance of total annual rainfall amounts, which is not the same as the variance of the proportion of rainy days. These variances were used relative to each other to compute stratum sample sizes with optimal allocation. An important assumption we make is that seasons with greater variance in total rainfall each year also have a greater variance in the probability of a given day to be rainy.
+
+### Stratum Sample Sizes
+\
+We used optimal allocation to determine the sample sizes for each stratum. Denote stratum h = 1, 2, 3, 4 as Winter, Spring, Summer, and Fall respectively. Assume all years are equally divided into four seasons so stratum population size N1 = N2 = N3 = N4.
+
+```{r}
+# Compute sample size by optimal allocation
+n <- 2227 #total sample size
+Nh <- 1/4 #assume the year is divided up into four equal seasons
+nh <- c(Nh*sqrt(seas.rainfall.var[1]), Nh*sqrt(seas.rainfall.var[2]), 
+        Nh*sqrt(seas.rainfall.var[3]), Nh*sqrt(seas.rainfall.var[4]))
+nh <- c( nh[1] / sum(nh), nh[2] / sum(nh), nh[3] / sum(nh), nh[4]/sum(nh) )*n
+nh <- round(nh,0)
+nh
+```
+
+```{r}
+# Divide dataset into four strata based on season
+# winter = 12,1,2
+# spring = 3,4,5
+# summer = 6,7,8
+# fall = 9,10,11
+winter <- data %>% filter(Month=="01" | Month=="1" | Month==1 | 
+                          Month=="02" | Month=="2" | Month==2 | 
+                          Month=="12" | Month==12)
+spring <- data %>% filter(Month=="03" | Month=="3" | Month==3 |
+                          Month=="04" | Month=="4" | Month==4 |
+                          Month=="05" | Month=="5" | Month==5)
+summer <- data %>% filter(Month=="06" | Month=="6" | Month==6 |
+                          Month=="07" | Month=="7" | Month==7 |
+                          Month=="08" | Month=="8" | Month==8)
+fall <- data %>% filter(Month=="09" | Month=="9" | Month==9 |
+                        Month=="10" | Month==10 |
+                        Month=="11" | Month==11)
+```
+
+
+### Estimation
+\
+Once again, our first parameter of interest is the proportion of days where total rain ≥ 0.2mm, denoted $π_s$. After we obtained a simple random sample of size $n_h$ for each stratum h, denote πh as the proportion of rainy days in stratum h, $y_hi$ be the value of total rain on the ith day in the sample of stratum h, and $u_hi$ = 1 if $y_hi$ ≥ 0.2, else $u_hi$ = 0.
+\
+Firstly, we obtained estimates for $π_h$, proportion of rainy days in Vancouver in each season h.
+
+```{r}
+# Create samples
+set.seed(2021)
+winter.str <- sample(winter$total_rain, size = nh[1], replace = FALSE)
+winter.str <- as.numeric(as.character(winter.str))
+spring.str <- sample(spring$total_rain, size = nh[2], replace = FALSE)
+spring.str <- as.numeric(as.character(spring.str))
+summer.str <- sample(summer$total_rain, size = nh[3], replace = FALSE)
+summer.str <- as.numeric(as.character(summer.str))
+fall.str <- sample(fall$total_rain, size = nh[4], replace = FALSE)
+fall.str <- as.numeric(as.character(fall.str))
+# Estimate str proportion of rainy days
+p.winter <- length(winter.str[winter.str >= 0.2])/nh[1]
+p.spring <- length(spring.str[spring.str >= 0.2])/nh[2]
+p.summer <- length(summer.str[summer.str >= 0.2])/nh[3]
+p.fall <- length(fall.str[fall.str >= 0.2])/nh[4]
+p.h <- c(p.winter, p.spring, p.summer, p.fall)
+round(p.h, 4)
+```
+\
+The corresponding standard errors for each $π_h$ are:
+```{r}
+# SE_h
+se.h <- c(sqrt((1-nh[1]/nrow(winter))*(p.h[1]*(1-p.h[1]))/nh[1]),
+sqrt((1-nh[2]/nrow(spring))*(p.h[2]*(1-p.h[2]))/nh[2]),
+sqrt((1-nh[3]/nrow(summer))*(p.h[3]*(1-p.h[3]))/nh[3]),
+sqrt((1-nh[4]/nrow(fall))*(p.h[4]*(1-p.h[4]))/nh[4]))
+round(se.h, 4)
+```
+\
+We then combined them to form a single estimate for $π_s$ across all strata (all seasons).
+
+```{r}
+p.str <- 1/4*sum(p.h)
+round(p.str, 4)
+```
+With Standard error of 0.0104.
+
+```{r}
+# SE str
+se.str <- sqrt((1/4)^2*sum(se.h^2))
+round(se.str, 4)
+```
+\
+Hence, the 95% confidence interval for $π_s$ is (0.428, 0.468).
+
+```{r}
+# 95% CI
+CI <- c(p.str-1.96*se.str, p.str+1.96*se.str)
+round(CI, 4)
+```
+
+Our second parameter of interest $µ_s$ is the mean number of rainy days per year across strata where total rain ≥ 10mm. Let $v_hi$ = 1 if $y_hi$ ≥ 10, else $v_hi$ = 0. 
+
+The means and the standard errors for the means are listed below:
+
+```{r}
+# mu
+mu.winter <- length(winter.str[winter.str >= 10])/nh[1]
+mu.spring <- length(spring.str[spring.str >= 10])/nh[2]
+mu.summer <- length(summer.str[summer.str >= 10])/nh[3]
+mu.fall <- length(fall.str[fall.str >= 10])/nh[4]
+mu.h <- c(mu.winter, mu.spring, mu.summer, mu.fall)*(365/4)
+round(mu.h,0)
+# SE
+se.h <- c(sqrt((365/4)^2*(1-nh[1]/nrow(winter))*(mu.winter*(1-mu.winter))/nh[1]),
+sqrt((365/4)^2*(1-nh[2]/nrow(spring))*(mu.spring*(1-mu.spring))/nh[2]),
+sqrt((365/4)^2*(1-nh[3]/nrow(summer))*(mu.summer*(1-mu.summer))/nh[3]),
+sqrt((365/4)^2*(1-nh[4]/nrow(fall))*(mu.fall*(1-mu.fall))/nh[4]))
+round(se.h, 4)
+```
+
+After combining the estimates across strata, we get our estimate for mean number of days per year (and its SE) where it rains at least 10mm in Vancouver:
+
+```{r}
+# mu_str
+mu.str <- sum(mu.h)
+round(mu.str,0)
+# SE str
+se.str <- sqrt(sum(se.h^2))
+round(se.str, 4)
+```
+Hence, the 95% confidence interval is (32,40).
+
+```{r}
+# 95% CI
+CI <- c(mu.str-1.96*se.str, mu.str+1.96*se.str)
+round(CI, 0)
+```
+
+# Conclusion
+\
+Firstly, with our estimate of $π$ we see that they are both very similar and there is a negligible difference between the standard errors. Since there is no decrease in margin of error, there is no improvement in the stratified sampling estimate. Similarly, for our estimate of µ, we see that the two confidence intervals have the same width and the difference in standard error is negligible. Therefore there is also no improvement in stratified sampling over simple random sample
 
